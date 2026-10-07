@@ -1,10 +1,15 @@
-FROM openjdk:11-jre-slim
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /workspace
 
+COPY . .
+
+RUN mvn -pl users-service -am -DskipTests package
+
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-COPY target/users-service-1.0.0.jar app.jar
+COPY --from=build /workspace/users-service/target/users-service-1.0.0.jar app.jar
 
 EXPOSE 8081
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
 

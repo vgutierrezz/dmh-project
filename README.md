@@ -3,6 +3,8 @@
 La aplicación permite registrar usuarios, autenticarlos mediante JWT, administrar cuentas digitales, consultar saldos, 
 gestionar tarjetas, realizar depósitos, ejecutar transferencias entre cuentas y visualizar historial de actividades financieras.
 
+El repositorio incluye tanto el backend de microservicios como el frontend web en la carpeta `frontend/`. No es necesario clonar un repositorio externo para el cliente.
+
 ---
 
 ## 🏗️ Arquitectura del Sistema
@@ -53,13 +55,62 @@ El ecosistema está compuesto por los siguientes módulos interconectados:
 ### 1. Requisitos Previos
 * Contar con el **Java Development Kit (JDK) 17** instalado.
 * Tener configurado un gestor de bases de datos **MySQL** corriendo localmente en los puertos correspondientes (`3306`/`3307` o el configurado en tus perfiles `yml`).
+* Tener **Docker** y **Docker Compose** instalados si se desea levantar el ecosistema completo de forma containerizada.
 
 ### 2. Preparación de las Bases de Datos
 Asegurate de que tu servidor MySQL local tenga disponibles los siguientes esquemas independientes. Las tablas físicas serán autogeneradas por Hibernate al iniciar los servicios (`ddl-auto: update`):
 ```sql
-CREATE DATABASE dmh_users_db;
-CREATE DATABASE dmh_accounts_db;
+CREATE DATABASE users_db;
+CREATE DATABASE accounts_db;
 ```
+
+### 3. Levantar el proyecto con Docker
+La forma recomendada para correr el ecosistema completo es a través de Docker Compose. La API Gateway es la puerta de entrada del sistema y es el punto al que deben apuntar las llamadas externas.
+
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/vgutierrezz/dmh-backend.git
+cd dmh-backend
+```
+
+2. Levantar todos los servicios:
+```bash
+docker compose up --build -d
+```
+
+Esto levantará:
+- `eureka-server` en `http://localhost:8761`
+- `api-gateway` en `http://localhost:8080`
+- `auth-service` en `http://localhost:8088`
+- `users-service` en `http://localhost:8081`
+- `accounts-service` en `http://localhost:8082`
+- `frontend` en `http://localhost:3000`
+
+3. Verificar estado de los contenedores:
+```bash
+docker compose ps
+```
+
+4. Ver logs si hace falta:
+```bash
+docker compose logs -f
+```
+
+5. Detener el entorno:
+```bash
+docker compose down
+```
+
+> Importante: todas las llamadas protegidas deben apuntar a la gateway en `http://localhost:8080` y no directamente a cada microservicio.
+
+### 4. Ejecutar la app sin Docker
+Si se quiere correr localmente, se puede levantar cada microservicio con Maven desde su directorio correspondiente:
+```bash
+mvn spring-boot:run
+```
+
+En este caso, cada servicio debe tener su propio perfil de configuración y la base de datos debe estar disponible en los puertos configurados.
+
 ---
 
 # ✅ Testing y Calidad
@@ -106,19 +157,25 @@ La versión final fue promovida a la rama **`prod`** luego de la aprobación del
 
 ---
 
-# 📂 Repositorios
+# 📂 Estructura del Repositorio
 
-## Frontend
-
-```text
-https://github.com/vgutierrezz/dmh-frontend
-```
-
-## Backend
+El proyecto completo se mantiene dentro del mismo repositorio. El frontend ya no vive en un repo separado y queda bajo `frontend/`.
 
 ```text
-https://github.com/vgutierrezz/dmh-backend
+dmh-backend/
+├── frontend/                # aplicación web del cliente
+├── eureka-server/           # discovery server
+├── api-gateway/             # entry point / routing
+├── auth-service/            # autenticación y JWT
+├── users-service/           # gestión de usuarios
+├── accounts-service/        # gestión de cuentas y movimientos
+├── docker-compose.yml       # orquestación completa
+├── pom.xml                  # padre Maven del backend
+├── README.md
+└── docs/
 ```
+
+> El frontend se compila y levanta junto con el ecosistema mediante `docker-compose.yml`.
 
 ---
 
@@ -424,13 +481,114 @@ El backend cuenta con pruebas automatizadas ejecutables mediante **Maven**, util
 
 Antes de correr los tests, asegurate de contar con:
 
-- JDK instalado.
+- JDK 17 instalado.
 - Maven configurado.
-- MySQL disponible ya que los tests requieren contexto de base de datos.
+- MySQL disponible, ya que los tests requieren contexto de base de datos.
 - Las bases de datos creadas:
-``
-  sql CREATE DATABASE dmh_users_db; CREATE DATABASE dmh_accounts_db;
-``
+```sql
+CREATE DATABASE users_db;
+CREATE DATABASE accounts_db;
+```
+
+### Ejecutar la suite completa
+Desde la raíz del proyecto:
+```bash
+mvn test
+```
+
+### Ejecutar tests por módulo
+```bash
+mvn test -pl auth-service
+mvn test -pl users-service
+mvn test -pl accounts-service
+```
+
+> La ejecución de pruebas automatizadas valida la lógica del negocio y la seguridad del sistema, incluyendo los flujos de autenticación, registro, cuentas, tarjetas y transferencias.
+
+---
+
+## 🧭 Colección de Postman
+
+La colección de Postman para testear todos los endpoints está en:
+```text
+docs/dmh-backend.postman_collection.json
+```
+
+### ¿Cómo usarla?
+1. Abrir Postman.
+2. Importar la colección `docs/dmh-backend.postman_collection.json`.
+3. Verificar la variable `baseUrl`:
+   - Docker: `http://localhost:8080`
+4. Ejecutar el request `Auth > Login`.
+5. La colección guarda el JWT en la variable {{authToken}} y, a partir de ese momento, usa automáticamente autenticación Bearer Token para los endpoints protegidos.
+
+### Flujo recomendado para pruebas
+1. `POST /api/users/register`
+2. `POST /api/auth/login`
+3. `POST /api/accounts/internal/create?userId={userId}`
+4. `GET /api/accounts`
+5. `POST /api/accounts/user/{userId}/cards`
+6. `POST /api/accounts/user/{userId}/deposit`
+7. `POST /api/accounts/user/{userId}/transfers`
+8. `GET /api/accounts/user/{userId}/activity`
+
+### Autenticación con Bearer Token
+La colección está configurada para usar el token JWT en el header:
+```http
+Authorization: Bearer {{authToken}}
+```
+
+Cuando se ejecuta el login, la respuesta devuelve un JWT y el script de prueba guarda ese valor en `{{authToken}}`. A partir de ahí, todas las peticiones protegidas quedan autenticadas automáticamente, sin necesidad de copiar y pegar el token manualmente.
+
+> Si el token no existe o es inválido, la API responderá con `403 Forbidden` porque los endpoints protegidos requieren un JWT válido.
+
+---
+# 🎯 Estado del Proyecto
+
+| Concepto | Estado |
+|-----------|------------|
+| Arquitectura de Microservicios | ✅ Implementada |
+| Registro de Usuarios | ✅ Implementado |
+| Autenticación JWT | ✅ Implementada |
+| Gestión de Cuentas | ✅ Implementada |
+| Gestión de Tarjetas | ✅ Implementada |
+| Consulta de Actividades | ✅ Implementada |
+| Depósitos | ✅ Implementados |
+| Transferencias | ✅ Implementadas |
+| Testing Manual | ✅ Completado |
+| Testing Automatizado | ✅ Completado |
+| QA Sign Off | ✅ Aprobado |
+| Release Producción | ✅ Generada |
+
+---
+
+# 👩‍💻 Autora
+
+**Valentina Gutierrez**
+
+Proyecto desarrollado para la Especialización Backend utilizando una arquitectura basada en microservicios con Spring Boot, Spring Cloud, JWT, OpenFeign y MySQL.
+
+---
+
+# 📌 Conclusión
+
+Digital Money House fue desarrollado siguiendo una arquitectura distribuida basada en microservicios, aplicando principios de escalabilidad, desacoplamiento y seguridad.
+
+La aplicación fue sometida a un proceso completo de validación funcional mediante pruebas manuales y automatizadas, obteniendo una cobertura total de los requisitos definidos para los Sprint 1 a Sprint 4.
+
+✅ **Resultado Final QA: APROBADO**
+
+✅ **Versión liberada a rama `prod` luego de la aprobación de QA Sign Off**
+
+✅ **Proyecto Finalizado*### Autenticación con Bearer Token
+La colección está configurada para usar el token JWT en el header:
+`http
+Authorization: Bearer {{authToken}}
+`
+
+Cuando se ejecuta el login, la respuesta devuelve un JWT y el script de prueba guarda ese valor en `{{authToken}}`. A partir de ahí, todas las peticiones protegidas quedan autenticadas automáticamente, sin necesidad de copiar y pegar el token manualmente.
+
+> Si el token no existe o es inválido, la API responderá con `403 Forbidden` porque los endpoints protegidos requieren un JWT válido.
 
 ---
 # 🎯 Estado del Proyecto

@@ -1,0 +1,307 @@
+{
+  "info": {
+    "_postman_id": "b9d1ef12-83f1-45c5-b14d-5ef6a3b8c8d1",
+    "name": "DMH Backend API - Docker Ready",
+    "description": "Colección lista para probar Auth, Users y Accounts usando la gateway en http://localhost:8080. La autenticación usa Bearer Token y el token se guarda en la variable {{authToken}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" },
+
+    { "key": "firstName", "value": "Juan", "type": "string" },
+    { "key": "lastName", "value": "Pérez", "type": "string" },
+    { "key": "dni", "value": "12345678", "type": "string" },
+    { "key": "userEmail", "value": "juan.perez@example.com", "type": "string" },
+    { "key": "userPhone", "value": "1122334455", "type": "string" },
+    { "key": "userPassword", "value": "password123", "type": "string" },
+
+    { "key": "userId", "value": "1", "type": "string" },
+    { "key": "accountId", "value": "1", "type": "string" },
+    { "key": "cardId", "value": "1", "type": "string" },
+    { "key": "activityId", "value": "1", "type": "string" },
+
+    { "key": "accountAlias", "value": "mi.alias.cuenta", "type": "string" },
+    { "key": "cardNumber", "value": "4111111111111111", "type": "string" },
+    { "key": "cardExpiration", "value": "12/28", "type": "string" },
+    { "key": "cardName", "value": "Juan Pérez", "type": "string" },
+    { "key": "cardCvc", "value": "123", "type": "string" },
+
+    { "key": "transferAmount", "value": "150.5", "type": "string" },
+    { "key": "transferOrigin", "value": "0987654321", "type": "string" },
+    { "key": "transferDestination", "value": "1234567890", "type": "string" },
+
+    { "key": "depositAmount", "value": "1000.00", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json();",
+                  "if (res && res.token) { pm.collectionVariables.set('authToken', res.token); }",
+                  "if (res && res.accessToken) { pm.collectionVariables.set('authToken', res.accessToken); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json();",
+                  "if (res && res.id) { pm.collectionVariables.set('userId', String(res.id)); }",
+                  "if (res && res.email) { pm.collectionVariables.set('userEmail', res.email); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"{{firstName}}\",\n  \"lastName\": \"{{lastName}}\",\n  \"dni\": \"{{dni}}\",\n  \"email\": \"{{userEmail}}\",\n  \"phone\": \"{{userPhone}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/register"
+          }
+        },
+        {
+          "name": "Get User By Email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/{{userEmail}}"
+          }
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Create Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json();",
+                  "if (res && res.id) { pm.collectionVariables.set('accountId', String(res.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/internal/create?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "internal", "create"],
+              "query": [
+                { "key": "userId", "value": "{{userId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts"
+          }
+        },
+        {
+          "name": "Get Account By User Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}"
+          }
+        },
+        {
+          "name": "Update Alias",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alias\": \"{{accountAlias}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/accounts/{{accountId}}"
+          }
+        },
+        {
+          "name": "Get Account Activity By User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/activity"
+          }
+        },
+        {
+          "name": "Get Cards By User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/cards"
+          }
+        },
+        {
+          "name": "Create Card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json();",
+                  "if (res && res.id) { pm.collectionVariables.set('cardId', String(res.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{cardNumber}}\",\n  \"expiration\": \"{{cardExpiration}}\",\n  \"name\": \"{{cardName}}\",\n  \"cvc\": \"{{cardCvc}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/cards"
+          }
+        },
+        {
+          "name": "Delete Card",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/cards/{{cardId}}"
+          }
+        },
+        {
+          "name": "Create Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": {{transferAmount}},\n  \"destination\": \"{{transferDestination}}\",\n  \"origin\": \"{{transferOrigin}}\",\n  \"type\": \"TRANSFER\"\n}"
+            },
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/transfers"
+          }
+        },
+        {
+          "name": "Get Activity By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/accounts/activity/{{activityId}}"
+          }
+        },
+        {
+          "name": "Deposit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json();",
+                  "if (res && res.id) { pm.collectionVariables.set('activityId', String(res.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": {{depositAmount}},\n  \"type\": \"DEPOSIT\",\n  \"description\": \"Depósito inicial\"\n}"
+            },
+            "url": "{{baseUrl}}/api/accounts/user/{{userId}}/deposit"
+          }
+        }
+      ]
+    }
+  ]
+}

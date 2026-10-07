@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkdigital_money_app=self.webpackChunkdigital_money_app||[]).push([[661],{661:(e,a,n)=>{n.r(a),n.d(a,{default:()=>s});n(2791);var p=n(184);const s=()=>(0,p.jsx)("h1",{children:"PageNotFound"})}}]);
+//# sourceMappingURL=661.d8615ea3.chunk.js.map

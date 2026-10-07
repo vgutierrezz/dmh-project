@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -134,5 +135,20 @@ public class GlobalExceptionHandler {
                         message,
                         LocalDateTime.now()
                 ));
+    }
+
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ResponseEntity<Map<String, Object>> handleInsufficientFunds(
+            InsufficientFundsException ex) {
+
+        Map<String, Object> response = Map.of(
+                "status", HttpStatus.GONE.value(),
+                "message", ex.getMessage(),
+                "timestamp", LocalDateTime.now()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.GONE)
+                .body(response);
     }
 }

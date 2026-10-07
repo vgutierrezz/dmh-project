@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql-users:
     image: mysql:8.0
@@ -32,97 +30,109 @@ services:
       - dmh-network
 
   eureka-server:
-    image: openjdk:11-jre-slim
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    image: dmh/eureka-server:1.0.0
     container_name: eureka-server
-    working_dir: /app
-    volumes:
-      - ./eureka-server:/app
     ports:
       - "8761:8761"
-    command: java -jar app.jar
     depends_on:
       - mysql-users
       - mysql-accounts
     networks:
       - dmh-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      SPRING_PROFILES_ACTIVE: docker
 
   api-gateway:
-    image: openjdk:11-jre-slim
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: dmh/api-gateway:1.0.0
     container_name: api-gateway
-    working_dir: /app
-    volumes:
-      - ./api-gateway:/app
     ports:
       - "8080:8080"
-    command: java -jar app.jar
     depends_on:
       - eureka-server
     networks:
       - dmh-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
 
   auth-service:
-    image: openjdk:11-jre-slim
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    image: dmh/auth-service:1.0.0
     container_name: auth-service
-    working_dir: /app
-    volumes:
-      - ./auth-service:/app
     ports:
       - "8088:8088"
-    command: java -jar app.jar
-    depends_on:
-      - eureka-server
-    networks:
-      - dmh-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-
-  users-service:
-    image: openjdk:11-jre-slim
-    container_name: users-service
-    working_dir: /app
-    volumes:
-      - ./users-service:/app
-    ports:
-      - "8081:8081"
-    command: java -jar app.jar
     depends_on:
       - eureka-server
       - mysql-users
     networks:
       - dmh-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-users:3306/users_db
-      - SPRING_DATASOURCE_USERNAME=dmh_user
-      - SPRING_DATASOURCE_PASSWORD=dmh_password
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-users:3306/users_db
+      SPRING_DATASOURCE_USERNAME: dmh_user
+      SPRING_DATASOURCE_PASSWORD: dmh_password
+
+  users-service:
+    build:
+      context: .
+      dockerfile: users-service/Dockerfile
+    image: dmh/users-service:1.0.0
+    container_name: users-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - eureka-server
+      - mysql-users
+    networks:
+      - dmh-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-users:3306/users_db
+      SPRING_DATASOURCE_USERNAME: dmh_user
+      SPRING_DATASOURCE_PASSWORD: dmh_password
 
   accounts-service:
-    image: openjdk:11-jre-slim
+    build:
+      context: .
+      dockerfile: accounts-service/Dockerfile
+    image: dmh/accounts-service:1.0.0
     container_name: accounts-service
-    working_dir: /app
-    volumes:
-      - ./accounts-service:/app
     ports:
       - "8082:8082"
-    command: java -jar app.jar
     depends_on:
       - eureka-server
       - mysql-accounts
     networks:
       - dmh-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-accounts:3306/accounts_db
-      - SPRING_DATASOURCE_USERNAME=dmh_user
-      - SPRING_DATASOURCE_PASSWORD=dmh_password
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-accounts:3306/accounts_db
+      SPRING_DATASOURCE_USERNAME: dmh_user
+      SPRING_DATASOURCE_PASSWORD: dmh_password
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: dmh/frontend:1.0.0
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - dmh-network
 
 volumes:
   mysql-users-volume:
@@ -131,4 +141,3 @@ volumes:
 networks:
   dmh-network:
     driver: bridge
-
